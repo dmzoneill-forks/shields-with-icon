@@ -1,0 +1,33 @@
+name: Go
+on:
+  schedule:
+    - cron: 0 0 * * *
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21.4"
+      - name: Install dependencies
+        run: go get .
+      - name: Generate outputs
+        run: make
+      - name: Check difference
+        id: diff
+        run: git diff --name-only --exit-code README.md Snippets.md docs/data.json
+        continue-on-error: true
+      - name: Commit outputs
+        if: steps.diff.outcome == 'failure'
+        run: |
+          set -x
+          git config user.name "progfay"
+          git config user.email "19568747+github-actions@users.noreply.github.com"
+          git remote set-url origin https://progfay:${{ secrets.GITHUB_TOKEN }}@github.com/progfay/shields-with-icon
+          git add README.md Snippets.md docs/data.json
+          git commit -m 'doc: update fixtures (auto-generated)'
+          git push origin master
